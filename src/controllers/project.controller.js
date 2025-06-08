@@ -120,3 +120,20 @@ export const searchProjects = async (req, res) => {
     res.status(500).json({ message: 'Search failed', error });
   }
 };
+
+export const getProjectsByUser = async (req, res) => {
+  try {
+    const projects = await ProjectModel.find({ postedBy: req.user._id })
+      .populate("postedBy", "name email role")
+      .sort({ createdAt: -1 });
+
+    if (projects.length === 0) {
+      return res.status(404).json({ message: "No projects found for this user" });
+    }
+
+    res.json(projects);
+  } catch (err) {
+    console.log("Error fetching user projects:", err);
+    res.status(500).json({ error: "Failed to fetch user projects" });
+  }
+}                                         

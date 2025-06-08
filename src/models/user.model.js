@@ -34,7 +34,12 @@ const userSchema = new mongoose.Schema({
     skills: { type: String },
     linkedin: { type: String },
     bio: { type: String },
-    isMentorRequestPending: { type: Boolean, default: false },
+    mentorRequestStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected','default'],
+      default: 'default',
+    },
+
   },
 }, {
   timestamps: true,

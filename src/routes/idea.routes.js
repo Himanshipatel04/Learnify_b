@@ -9,7 +9,7 @@ import {
 } from '../controllers/idea.controller.js';
 import { requireRole } from '../middlewares/auth.middleware.js';
 
-const ideaRouter = Router();
+export const ideaRouter = Router();
 
 // Create a new idea
 ideaRouter.post('/', requireRole(["user", "mentor", "admin"]), createIdea);
@@ -29,4 +29,4 @@ ideaRouter.delete('/:id', requireRole(["user", "mentor", "admin"]), deleteIdea);
 // Search ideas by query
 ideaRouter.get('/search', requireRole(["user", "mentor", "admin"]), searchIdeas);
 
-export default ideaRouter;
+
