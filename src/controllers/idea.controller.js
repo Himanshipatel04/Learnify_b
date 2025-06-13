@@ -14,6 +14,18 @@ export const createIdea = async (req, res) => {
   }
 };
 
+export const getIdeasByUser = async (req, res) => {
+  try {
+    const ideas = await IdeaModel.find({ postedBy: req.user._id }).populate('postedBy', 'name');
+    if (!ideas || ideas.length === 0) {
+      return res.status(200).json({ message: 'No ideas found!' });
+    }
+    res.status(200).json(ideas);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to get user ideas', error });
+  }
+}
+
 // Get All Ideas
 export const getAllIdeas = async (req, res) => {
   try {

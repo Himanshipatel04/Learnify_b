@@ -5,12 +5,14 @@ import {
   updateIdea,
   deleteIdea,
   getIdeaById,
-  searchIdeas
+  searchIdeas,
+  getIdeasByUser
 } from '../controllers/idea.controller.js';
 import { requireRole } from '../middlewares/auth.middleware.js';
 
 export const ideaRouter = Router();
 
+ideaRouter.get('/by-user', requireRole(["user", "mentor", "admin"]), getIdeasByUser)
 // Create a new idea
 ideaRouter.post('/', requireRole(["user", "mentor", "admin"]), createIdea);
 
@@ -28,5 +30,6 @@ ideaRouter.delete('/:id', requireRole(["user", "mentor", "admin"]), deleteIdea);
 
 // Search ideas by query
 ideaRouter.get('/search', requireRole(["user", "mentor", "admin"]), searchIdeas);
+
 
 

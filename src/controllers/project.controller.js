@@ -1,18 +1,23 @@
-import ProjectModel from "../models/project.model";
+// src/controllers/project.controller.js
+import ProjectModel from "../models/project.model.js";
 
 export const createProject = async (req, res) => {
   try {
+    const imageUrl = req.file?.path || ""; 
+
     const project = await ProjectModel.create({
       ...req.body,
+      image: imageUrl,
       postedBy: req.user._id,
     });
 
     res.status(201).json(project);
   } catch (err) {
-    console.log("Error creating project:", err);
+    console.error("Error creating project:", err);
     res.status(500).json({ error: "Failed to create project", details: err.message });
   }
 };
+
 
 export const getAllProjects = async (req, res) => {
   try {
@@ -29,6 +34,7 @@ export const getAllProjects = async (req, res) => {
 
 export const getProjectById = async (req, res) => {
   try {
+    console.log("getProjectsById")
     const project = await ProjectModel.findById(req.params.id)
       .populate("postedBy", "name email role");
 
@@ -123,12 +129,13 @@ export const searchProjects = async (req, res) => {
 
 export const getProjectsByUser = async (req, res) => {
   try {
+    // console.log(req.user," User fetching projects");        
     const projects = await ProjectModel.find({ postedBy: req.user._id })
       .populate("postedBy", "name email role")
       .sort({ createdAt: -1 });
-
+     
     if (projects.length === 0) {
-      return res.status(404).json({ message: "No projects found for this user" });
+      return res.status(200).json({ message: "No projects found!" });
     }
 
     res.json(projects);

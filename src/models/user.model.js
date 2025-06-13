@@ -18,6 +18,9 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
+  college: {
+    type: String,
+  },
   role: {
     type: String,
     enum: ['user', 'admin', 'mentor'],
@@ -26,6 +29,23 @@ const userSchema = new mongoose.Schema({
   picture: {
     type: String,
     required: true,
+  },
+  bio: {
+    type: String,
+  },
+  githubUsername: {
+    type: String,
+    unique: true,
+    sparse: true, 
+  },
+  linkedinUrl: {
+    type: String,
+    unique: true,
+    sparse: true, 
+  },
+  isProfilePrivate: {
+    type: Boolean,
+    default: false
   },
   mentorDetails: {
     designation: { type: String },
@@ -36,7 +56,7 @@ const userSchema = new mongoose.Schema({
     bio: { type: String },
     mentorRequestStatus: {
       type: String,
-      enum: ['pending', 'approved', 'rejected','default'],
+      enum: ['pending', 'approved', 'rejected', 'default'],
       default: 'default',
     },
 
