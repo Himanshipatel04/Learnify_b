@@ -21,7 +21,9 @@ export const applyForMentorship = async () => {
 
 export const updateProfile = async (req, res) => {
     try {
-        const { github, name, linkedinUrl, bio,college } = req.body;
+        const { github, linkedinUrl, bio, college } = req.body;
+
+        // console.log(github, linkedinUrl, bio, college);   
 
         if (bio && bio.length > 20) {
             return res.status(400).json({ error: "Bio must be less than 20 characters" });
@@ -30,10 +32,9 @@ export const updateProfile = async (req, res) => {
         const updates = {};
 
         if (github !== undefined) updates.githubUsername = github;
-        if (name !== undefined) updates.name = name;
         if (linkedinUrl !== undefined) updates.linkedinUrl = linkedinUrl;
         if (bio !== undefined) updates.bio = bio;
-        if (college !== undefined) updates.college = college;               
+        if (college !== undefined) updates.college = college;
 
         const user = await UserModel.findByIdAndUpdate(req.user._id, updates, {
             new: true,

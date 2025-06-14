@@ -1,6 +1,5 @@
 import LikeModel from "../models/like.model";
 
-
 export const toggleLikeProject = async (req, res) => {
     const userId = req.user._id;
     const projectId = req.params.id;
