@@ -36,6 +36,9 @@ const ProjectSchema = mongoose.Schema(
             type: String,
             required: true,
         },
+        liveLink:{
+            type: String,           
+        },
         image: {
             type: String,
         },
