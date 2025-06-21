@@ -7,9 +7,9 @@ const IdeaSchema = mongoose.Schema(
             required: true,
             unique: true
         },
-         tags:{
-            type: [String], 
-         },
+        tags: {
+            type: [String],
+        },
         description: {
             type: String,
             required: true,

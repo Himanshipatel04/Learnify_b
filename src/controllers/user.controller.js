@@ -1,4 +1,7 @@
+import BlogModel from "../models/blog.model";
+import ProjectModel from "../models/project.model";
 import UserModel from "../models/user.model";
+import IdeaModel from "../models/idea.model";
 
 export const applyForMentorship = async () => {
     try {
@@ -58,8 +61,8 @@ export const getUserProfile = async (req, res) => {
         const userId = req.params.userId;
         if (!userId) {
             return res.status(400).json({ error: "User ID is required" });
-        }                                               
-        // console.log("users")
+        }
+
         const user = await UserModel.findById(userId);
         if (!user) {
             return res.status(404).json({ error: "User not found" });
@@ -71,3 +74,33 @@ export const getUserProfile = async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 }
+
+export const getUserProfileData = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        if (!userId) {
+            return res.status(400).json({ error: "User ID is required" });
+        }
+
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const userBlogs = await BlogModel.find({ postedBy: userId }).sort({ createdAt: -1 })
+
+        const userProjects = await ProjectModel.find({ postedBy: userId }).sort({ createdAt: -1 })
+
+        const userIdeas = await IdeaModel.find({ postedBy: userId }).sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            user,
+            blogs: userBlogs,
+            projects: userProjects,
+            ideas: userIdeas,
+        });
+    } catch (error) {
+        console.error("Error fetching user profile data:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}                                           
