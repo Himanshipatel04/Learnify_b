@@ -1,8 +1,8 @@
 import { Router } from "express";
 import passport from "passport";
-import { getUser, googleCallback, logoutUser, registerUser } from "../controllers/auth.controller";
+import { getUser, googleCallback, logoutUser, registerUser,loginUser } from "../controllers/auth.controller";
 import { requireRole } from "../middlewares/auth.middleware";
-import { loginUser } from "../../../frontend/src/hooks/useAuth";
+
 
 export const authRouter = Router();
 

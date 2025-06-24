@@ -4,6 +4,7 @@ const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
     // required: true,
+    sparse: true,
     unique: true,
   },
   name: {
@@ -21,6 +22,9 @@ const userSchema = new mongoose.Schema({
   college: {
     type: String,
   },
+  password: {
+    type: String,
+  },
   role: {
     type: String,
     enum: ['user', 'admin', 'mentor'],
@@ -28,7 +32,6 @@ const userSchema = new mongoose.Schema({
   },
   picture: {
     type: String,
-    // required: true,
   },
   bio: {
     type: String,
@@ -36,12 +39,12 @@ const userSchema = new mongoose.Schema({
   githubUsername: {
     type: String,
     unique: true,
-    sparse: true, 
+    sparse: true,
   },
   linkedinUrl: {
     type: String,
     unique: true,
-    sparse: true, 
+    sparse: true,
   },
   isProfilePrivate: {
     type: Boolean,

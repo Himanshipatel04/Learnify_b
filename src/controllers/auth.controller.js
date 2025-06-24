@@ -92,3 +92,55 @@ export const registerUser = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+export const loginUser = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        const user = await UserModel.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        // Check if user was registered via Google OAuth
+        if (!user.password) {
+            return res.status(403).json({ error: 'This email is registered via Google. Please log in using Google Sign-In.' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        const token = jwt.sign(
+            {
+                id: user._id,
+                role: user.role,
+                email: user.email,
+                name: user.name
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        return res.status(200).json(
+            user
+        );
+
+    } catch (error) {
+        console.error('Error logging in user:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+
