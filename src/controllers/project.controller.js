@@ -3,7 +3,7 @@ import ProjectModel from "../models/project.model.js";
 
 export const createProject = async (req, res) => {
   try {
-    const imageUrl = req.file?.path || ""; 
+    const imageUrl = req.file?.path || "";
 
     const project = await ProjectModel.create({
       ...req.body,
@@ -133,7 +133,7 @@ export const getProjectsByUser = async (req, res) => {
     const projects = await ProjectModel.find({ postedBy: req.user._id })
       .populate("postedBy", "name email role")
       .sort({ createdAt: -1 });
-     
+
     if (projects.length === 0) {
       return res.status(200).json({ message: "No projects found!" });
     }
@@ -143,4 +143,49 @@ export const getProjectsByUser = async (req, res) => {
     console.log("Error fetching user projects:", err);
     res.status(500).json({ error: "Failed to fetch user projects" });
   }
-}                                         
+}
+
+export const getProjectsByDomain = async (req, res) => {
+  try {
+    const { domain } = req.params;
+
+    if (!domain) return res.status(400).json({ error: "Domain is required" });
+
+    const projects = await ProjectModel.find({ domain })
+      .populate("postedBy", "name email role")
+      .sort({ createdAt: -1 });
+
+    if (projects.length === 0) {
+      return res.status(404).json({ message: "No projects found for this domain" });
+    }
+
+    res.json(projects);
+  } catch (err) {
+    console.log("Error fetching projects by domain:", err);
+    res.status(500).json({ error: "Failed to fetch projects by domain" });
+  }
+};
+
+export const getProjectsByPagination = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+    const projects = await ProjectModel.find()
+      .populate("postedBy", "name email role")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+    const totalProjects = await ProjectModel.countDocuments();
+    const totalPages = Math.ceil(totalProjects / limit);
+    res.json({
+      projects,
+      totalProjects,
+      totalPages,
+      currentPage: Number(page),
+    });
+
+  } catch (error) {
+    console.log("Error fetching projects by pagination:", error);
+    res.status(500).json({ error: "Failed to fetch projects by pagination" });
+  }
+}
