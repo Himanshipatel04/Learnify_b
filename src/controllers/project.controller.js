@@ -168,24 +168,37 @@ export const getProjectsByDomain = async (req, res) => {
 
 export const getProjectsByPagination = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, query = "" } = req.query;
     const skip = (page - 1) * limit;
-    const projects = await ProjectModel.find()
+
+    const searchCondition = query
+      ? {
+        $or: [
+          { title: { $regex: query, $options: "i" } },
+          { tags: { $regex: query, $options: "i" } },
+          { domain: { $regex: query, $options: "i" } },
+          { "postedBy.name": { $regex: query, $options: "i" } },
+        ],
+      }
+      : {};
+
+    const projects = await ProjectModel.find(searchCondition)
       .populate("postedBy", "name email role")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
-    const totalProjects = await ProjectModel.countDocuments();
+
+    const totalProjects = await ProjectModel.countDocuments(searchCondition);
     const totalPages = Math.ceil(totalProjects / limit);
+
     res.json({
       projects,
       totalProjects,
       totalPages,
       currentPage: Number(page),
     });
-
   } catch (error) {
-    console.log("Error fetching projects by pagination:", error);
+    console.error("Error fetching projects by pagination:", error);
     res.status(500).json({ error: "Failed to fetch projects by pagination" });
   }
-}
+};
