@@ -41,6 +41,7 @@ import { ideaRouter } from './src/routes/idea.routes.js';
 import { userRouter } from './src/routes/user.routes.js';
 import { generalLimiter } from './src/middlewares/ratelimiter.middleware.js';
 import { blogRouter } from './src/routes/blog.routes.js'
+import { notificationRouter } from './src/routes/notification.routes.js';
 app.use('/auth', authRouter);
 app.use('/likes', likeRouter);
 app.use('/comments', commentRouter);
@@ -49,6 +50,7 @@ app.use('/ideas', ideaRouter)
 app.use('/gemini', geminiRouter);
 app.use('/users', userRouter);
 app.use('/blogs', blogRouter)
+app.use('/notifications', notificationRouter)
 
 //Start the server  
 const PORT = process.env.PORT || 3000;

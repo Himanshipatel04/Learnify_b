@@ -2,49 +2,57 @@ import BlogModel from "../models/blog.model";
 import ProjectModel from "../models/project.model";
 import UserModel from "../models/user.model";
 import IdeaModel from "../models/idea.model";
+import { NotificationModel } from "../models/notification.model";
 
 export const applyForMentorship = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const {
-      designation,
-      company,
-      experience,
-      skills,
-      linkedin,
-      reason,
-    } = req.body;
+    try {
+        const { userId } = req.params;
+        const {
+            designation,
+            company,
+            experience,
+            skills,
+            linkedin,
+            reason,
+        } = req.body;
 
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        if (user.role === 'mentor') {
+            return res.status(403).json({ error: "User is already a mentor" });
+        }
+
+        user.mentorDetails = {
+            designation,
+            company,
+            experience,
+            skills,
+            linkedin,
+            reason,
+            mentorRequestStatus: 'pending',
+        };
+
+        await user.save();
+
+        const notification = new NotificationModel({
+            user: user._id,
+            message: `You have applied for mentorship. Please wait for approval.`,
+            read: false,
+        });
+        await notification.save();          
+        
+        return res.status(200).json({
+            message:
+                "Mentorship request applied successfully! You will be notified via email.",
+            user,
+        });
+    } catch (error) {
+        console.log("Error applying for mentorship:", error);
+        return res.status(500).json({ error: "Error applying for mentorship request" });
     }
-
-    if (user.role === 'mentor') {
-      return res.status(403).json({ error: "User is already a mentor" });
-    }
-
-    user.mentorDetails = {
-      designation,
-      company,
-      experience,
-      skills,
-      linkedin,
-      reason,
-      mentorRequestStatus: 'pending',
-    };
-
-    await user.save();
-
-    return res.status(200).json({
-      message:
-        "Mentorship request applied successfully! You will be notified via email.",
-      user,
-    });
-  } catch (error) {
-    console.log("Error applying for mentorship:", error);
-    return res.status(500).json({ error: "Error applying for mentorship request" });
-  }
 };
 
 export const updateProfile = async (req, res) => {
