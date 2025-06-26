@@ -54,14 +54,12 @@ const userSchema = new mongoose.Schema({
     company: { type: String },
     experience: { type: String },
     skills: { type: String },
-    linkedin: { type: String },
-    bio: { type: String },
+    reason: { type: String },
     mentorRequestStatus: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'default'],
+      enum: ['pending', 'approved', 'rejected'],
       default: 'default',
     },
-
   },
 }, {
   timestamps: true,

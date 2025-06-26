@@ -5,7 +5,7 @@ import { applyForMentorship, getUserProfile, getUserProfileData, togglePrivacy, 
 export const userRouter = Router();
 
 userRouter.put('/toggle-profile-privacy', requireRole(['user']), togglePrivacy)
-userRouter.get('/apply-for-mentorship', requireRole(['user']), applyForMentorship)
 userRouter.put('/update-profile', requireRole(['user']), updateProfile);
+userRouter.put('/apply-for-mentor/:userId', applyForMentorship);
 userRouter.get('/:userId', requireRole(['user', 'admin']), getUserProfile);
 userRouter.get('/get-user-profile/:userId', requireRole(['user']), getUserProfileData);             
