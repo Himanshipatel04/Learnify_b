@@ -183,7 +183,7 @@ export const getProjectsByPagination = async (req, res) => {
       : {};
 
     const projects = await ProjectModel.find(searchCondition)
-      .populate("postedBy", "name email role")
+      .populate("postedBy", "name role picture")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));

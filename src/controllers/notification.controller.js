@@ -90,3 +90,16 @@ export const deleteAllNotifications = async (req, res) => {
     }
 }
 
+export const getUnreadNotificationsCount = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        console.log(userId)
+        if (!userId) {
+            return res.status(400).json({ error: "User ID is required" });
+        }
+        const count = await NotificationModel.countDocuments({ user: userId, read: false });
+        return res.status(200).json({ count });
+    } catch (error) {
+        res.status(500).json({ message: "Internal Server Error!" })
+    }
+}
