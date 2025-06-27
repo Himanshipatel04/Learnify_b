@@ -2,13 +2,15 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import UserModel from '../models/user.model';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const googleCallback = (req, res) => {
     const token = jwt.sign({ id: req.user._id, role: req.user.role, email: req.user.email, name: req.user.name }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.cookie('token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-         sameSite: 'None',
+        secure: isProduction,                       // ❗ true only in prod
+        sameSite: isProduction ? 'None' : 'Lax',    // ❗ 'None' only for cross-site prod, 'Lax' for local dev
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -70,10 +72,12 @@ export const registerUser = async (req, res) => {
 
         // 6. Set token in cookie
         res.cookie('token', token, {
-            httpOnly: true, secure: process.env.NODE_ENV === 'production',
-             sameSite: 'None',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            httpOnly: true,
+            secure: isProduction,                       // ❗ true only in prod
+            sameSite: isProduction ? 'None' : 'Lax',    // ❗ 'None' only for cross-site prod, 'Lax' for local dev
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
+
 
         // 7. Send response
         return res.status(201).json({
@@ -127,8 +131,9 @@ export const loginUser = async (req, res) => {
         );
 
         res.cookie('token', token, {
-            httpOnly: true, secure: process.env.NODE_ENV === 'production',
-             sameSite: 'None',
+            httpOnly: true,
+            secure: isProduction,                       // ❗ true only in prod
+            sameSite: isProduction ? 'None' : 'Lax',    // ❗ 'None' only for cross-site prod, 'Lax' for local dev
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
