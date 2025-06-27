@@ -57,7 +57,7 @@ const userSchema = new mongoose.Schema({
     reason: { type: String },
     mentorRequestStatus: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
+      enum: ['pending', 'approved', 'rejected','default'],
       default: 'default',
     },
   },
