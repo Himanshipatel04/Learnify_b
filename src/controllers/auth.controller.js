@@ -7,7 +7,8 @@ export const googleCallback = (req, res) => {
 
     res.cookie('token', token, {
         httpOnly: true,
-        secure: false,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.redirect(process.env.FRONTEND_URL);
@@ -29,7 +30,6 @@ export const registerUser = async (req, res) => {
     try {
         const { email, password, name } = req.body;
 
-        console.log('registerUser called with:', { email, password, name });
 
         // 1. Validate input
         if (!email || !password || !name) {
@@ -69,10 +69,7 @@ export const registerUser = async (req, res) => {
 
         // 6. Set token in cookie
         res.cookie('token', token, {
-            httpOnly: true,
-            // secure: process.env.NODE_ENV === 'production',
-            secure: false,
-            // sameSite: 'lax',
+            httpOnly: true, secure: process.env.NODE_ENV === 'production',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
@@ -128,8 +125,7 @@ export const loginUser = async (req, res) => {
         );
 
         res.cookie('token', token, {
-            httpOnly: true,
-            secure: false,
+            httpOnly: true, secure: process.env.NODE_ENV === 'production',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
