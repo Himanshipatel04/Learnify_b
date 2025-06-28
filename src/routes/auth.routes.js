@@ -19,4 +19,4 @@ authRouter.post('/register',registerUser);
 
 authRouter.post('/login', loginUser)
 
-authRouter.get('/logout', logoutUser);
+authRouter.get('/logout',requireRole(['user','admin','mentor']), logoutUser);
