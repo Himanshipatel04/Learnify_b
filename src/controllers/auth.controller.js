@@ -26,7 +26,12 @@ export const getUser = async (req, res) => {
 };
 
 export const logoutUser = (req, res) => {
-    res.clearCookie('token').json({ message: 'Logged out' });
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'None' : 'Lax',
+        path: '/',
+    });
 };
 
 export const registerUser = async (req, res) => {
