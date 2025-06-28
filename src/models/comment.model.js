@@ -5,8 +5,15 @@ const CommentSchema = new mongoose.Schema(
     project: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
-      required: true,
     },
+    idea:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Idea",  
+    },
+    blog: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Blog",
+    },      
     commentedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

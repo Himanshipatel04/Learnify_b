@@ -10,7 +10,7 @@ projectRouter.get('/by-user', requireRole(['admin', 'user', 'mentor']), getProje
 projectRouter.post("/", requireRole(["user", "mentor", "admin"]), upload.single("image"), createProject);
 projectRouter.get("/", getAllProjects);
 projectRouter.get('/search', searchProjects);
-projectRouter.get("/:id", getProjectById);
+projectRouter.get("/:id", requireRole(['user', 'mentor', 'admin']), getProjectById);
 projectRouter.put("/:id", requireRole(["user", "mentor", "admin"]), updateProject);
 projectRouter.delete("/:id", requireRole(["user", "mentor", "admin"]), deleteProject);
 projectRouter.get('/get-projects-by-domain/:domain', getProjectsByDomain)

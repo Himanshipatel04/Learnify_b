@@ -1,5 +1,7 @@
 // src/controllers/project.controller.js
 import ProjectModel from "../models/project.model.js";
+import LikeModel from "../models/like.model.js";
+import CommentModel from "../models/comment.model.js";
 
 export const createProject = async (req, res) => {
   try {
@@ -22,8 +24,19 @@ export const createProject = async (req, res) => {
 export const getAllProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find()
-      .populate("postedBy", "name email role") // show user details
+      .populate("postedBy", "name email picture") // show user details
       .sort({ createdAt: -1 });
+
+    const likes = await LikeModel.find({ project: { $in: projects.map(p => p._id) } }).populate("user", "name _id");
+
+    projects.forEach(project => {
+      project.likes = likes.filter(like => like.project.toString() === project._id.toString());
+    }
+    );
+    if (projects.length === 0) {
+      return res.status(200).json({ message: "No projects found!" });
+    }
+    console.log("Fetched projects:", projects.length);
 
     res.json(projects);
   } catch (err) {
@@ -34,11 +47,24 @@ export const getAllProjects = async (req, res) => {
 
 export const getProjectById = async (req, res) => {
   try {
-    console.log("getProjectsById")
-    const project = await ProjectModel.findById(req.params.id)
-      .populate("postedBy", "name email role");
+    const projectDoc = await ProjectModel.findById(req.params.id)
+      .populate("postedBy", "name picture role");
 
-    if (!project) return res.status(404).json({ error: "Project not found" });
+    if (!projectDoc) return res.status(404).json({ error: "Project not found" });
+
+    const project = projectDoc.toObject();
+
+    const likes = await LikeModel.find({ project: project._id }).select("likedBy").populate("likedBy", "name _id picture");
+    const comments = await CommentModel.find({ project: project._id }).select("commentedBy content createdAt").populate("commentedBy", "name _id picture");
+
+    project.likes = likes;
+    project.likeCount = likes.length;
+    project.comments = comments;    
+
+    project.hasLiked =
+      req.user && req.user._id
+        ? likes.some(like => like.likedBy._id.toString() === req.user._id.toString())
+        : false;
 
     res.json(project);
   } catch (err) {
@@ -97,32 +123,46 @@ export const deleteProject = async (req, res) => {
 export const searchProjects = async (req, res) => {
   const { query } = req.query;
 
-  if (!query) return res.status(400).json({ message: 'Search query is required' });
+  if (!query?.trim()) {
+    return res.status(400).json({ message: 'Search query is required' });
+  }
 
   try {
-    const regex = new RegExp(query, 'i'); // case-insensitive regex
+    const projects = await ProjectModel.aggregate([
+      {
+        $search: {
+          index: "project_index",
+          text: {
+            query,
+            path: {
+              wildcard: "*"
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "postedBy",
+          foreignField: "_id",
+          as: "postedBy"
+        }
+      },
+      { $unwind: "$postedBy" },
+      {
+        $project: {
+          title: 1,
+          domain: 1,
+          abstract: 1,
+          tags: 1,
+          postedBy: { name: 1 }
+        }
+      }
+    ]);
 
-    // First, find projects matching title, domain or tags
-    let projects = await ProjectModel.find({
-      $or: [
-        { title: regex },
-        { domain: regex },
-        { tags: { $in: [regex] } },
-      ],
-    }).populate('postedBy', 'name'); // populate only name of postedBy
-
-    // Filter projects by postedBy.name matching regex
-    const filteredByPosterName = projects.filter(project =>
-      project.postedBy?.name?.match(regex)
-    );
-
-    // Combine projects matched by fields and those matched by poster name (avoid duplicates)
-    const combined = [...new Map(
-      [...projects, ...filteredByPosterName].map(item => [item._id.toString(), item])
-    ).values()];
-
-    res.status(200).json(combined);
+    res.status(200).json(projects);
   } catch (error) {
+    console.error("Search error:", error);
     res.status(500).json({ message: 'Search failed', error });
   }
 };
