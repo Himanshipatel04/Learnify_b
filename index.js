@@ -42,6 +42,8 @@ import { userRouter } from './src/routes/user.routes.js';
 import { generalLimiter } from './src/middlewares/ratelimiter.middleware.js';
 import { blogRouter } from './src/routes/blog.routes.js'
 import { notificationRouter } from './src/routes/notification.routes.js';
+import { adminRouter } from './src/routes/admin.routes.js'; 
+app.use('/admin', adminRouter); 
 app.use('/auth', authRouter);
 app.use('/likes', likeRouter);
 app.use('/comments', commentRouter);

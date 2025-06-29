@@ -4,7 +4,7 @@ import { deleteAllNotifications, deleteNotification, getNotificationForUser, get
 
 export const notificationRouter = Router()
 
-notificationRouter.get('/notifications-count/:userId', requireRole(['user', 'mentor']),getUnreadNotificationsCount)
+notificationRouter.get('/notifications-count/:userId', requireRole(['user', 'mentor','admin']),getUnreadNotificationsCount)
 notificationRouter.get('/get-notification-for-user/:userId', requireRole(['user', 'mentor']), getNotificationForUser);
 notificationRouter.put('/mark-all-read/:userId', requireRole(['user', 'mentor']), markAllNotificationsAsRead);
 notificationRouter.put('/mark-as-read/:id', requireRole(['user', 'mentor']), markNotificationAsRead);
