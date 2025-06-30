@@ -9,7 +9,7 @@ export const requireRole = (roles = []) => {
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const user = await mongoose.model('User').findById(decoded.id);
-            console.log(user)
+            // console.log(user)
             if (!user || !roles.includes(user.role)) {
                 return res.status(403).json({ error: 'Forbidden' });
             }

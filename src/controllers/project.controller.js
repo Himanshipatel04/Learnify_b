@@ -59,7 +59,7 @@ export const getProjectById = async (req, res) => {
 
     project.likes = likes;
     project.likeCount = likes.length;
-    project.comments = comments;    
+    project.comments = comments;
 
     project.hasLiked =
       req.user && req.user._id
@@ -208,31 +208,45 @@ export const getProjectsByDomain = async (req, res) => {
 
 export const getProjectsByPagination = async (req, res) => {
   try {
-    const { page = 1, limit = 10, query = "" } = req.query;
+    const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    const searchCondition = query
-      ? {
-        $or: [
-          { title: { $regex: query, $options: "i" } },
-          { tags: { $regex: query, $options: "i" } },
-          { domain: { $regex: query, $options: "i" } },
-          { "postedBy.name": { $regex: query, $options: "i" } },
-        ],
-      }
-      : {};
-
-    const projects = await ProjectModel.find(searchCondition)
+    const projects = await ProjectModel.find()
       .populate("postedBy", "name role picture")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
 
-    const totalProjects = await ProjectModel.countDocuments(searchCondition);
+    const projectIds = projects.map((p) => p._id);
+
+    const [likeCounts, commentCounts] = await Promise.all([
+      LikeModel.aggregate([
+        { $match: { project: { $in: projectIds } } }, // ✅ Fix here
+        { $group: { _id: "$project", count: { $sum: 1 } } },
+      ]),
+      CommentModel.aggregate([
+        { $match: { project: { $in: projectIds } } }, // ✅ Fix here
+        { $group: { _id: "$project", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const likesMap = Object.fromEntries(likeCounts.map((l) => [l._id.toString(), l.count]));
+    const commentsMap = Object.fromEntries(commentCounts.map((c) => [c._id.toString(), c.count]));
+
+    const enrichedProjects = projects.map((project) => {
+      const id = project._id.toString();
+      return {
+        ...project.toObject(),
+        likeCount: likesMap[id] || 0,
+        commentCount: commentsMap[id] || 0,
+      };
+    });
+
+    const totalProjects = await ProjectModel.countDocuments();
     const totalPages = Math.ceil(totalProjects / limit);
 
     res.json({
-      projects,
+      projects: enrichedProjects,
       totalProjects,
       totalPages,
       currentPage: Number(page),
@@ -242,3 +256,5 @@ export const getProjectsByPagination = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch projects by pagination" });
   }
 };
+
+
