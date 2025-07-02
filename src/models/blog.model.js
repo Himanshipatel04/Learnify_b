@@ -17,7 +17,14 @@ const blogSchema = new mongoose.Schema(
       required: true,
     },
     tags: [String],
-    
+    likeCount: {
+      type: Number,
+      default: 0,
+    },
+    commentCount: {
+      type: Number,
+      default: 0,
+    },
     coverImage: String,
   },
   { timestamps: true }

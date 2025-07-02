@@ -11,8 +11,8 @@ const ProjectSchema = mongoose.Schema(
             type: String,
             required: true,
         },
-        tags:{
-            type: [String], 
+        tags: {
+            type: [String],
         },
         domain: {
             type: String,
@@ -36,11 +36,19 @@ const ProjectSchema = mongoose.Schema(
             type: String,
             required: true,
         },
-        liveLink:{
-            type: String,           
+        liveLink: {
+            type: String,
         },
         image: {
             type: String,
+        },
+        likeCount: {
+            type: Number,
+            default: 0,
+        },
+        commentCount: {
+            type: Number,
+            default: 0,
         },
     },
     {

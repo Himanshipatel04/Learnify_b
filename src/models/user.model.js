@@ -18,23 +18,15 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  college: {
-    type: String,
-  },
-  password: {
-    type: String,
-  },
+  college: String,
+  password: String,
   role: {
     type: String,
     enum: ['user', 'admin', 'mentor'],
     default: 'user',
   },
-  picture: {
-    type: String,
-  },
-  bio: {
-    type: String,
-  },
+  picture: String,
+  bio: String,
   githubUsername: {
     type: String,
     unique: true,
@@ -50,14 +42,14 @@ const userSchema = new mongoose.Schema({
     default: false
   },
   mentorDetails: {
-    designation: { type: String },
-    company: { type: String },
-    experience: { type: String },
-    skills: { type: String },
-    reason: { type: String },
+    designation: String,
+    company: String,
+    experience: String,
+    skills: String,
+    reason: String,
     mentorRequestStatus: {
       type: String,
-      enum: ['pending', 'approved', 'rejected','default'],
+      enum: ['pending', 'approved', 'rejected', 'default'],
       default: 'default',
     },
   },

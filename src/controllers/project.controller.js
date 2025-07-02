@@ -2,6 +2,7 @@
 import ProjectModel from "../models/project.model.js";
 import LikeModel from "../models/like.model.js";
 import CommentModel from "../models/comment.model.js";
+import mongoose from "mongoose";
 
 export const createProject = async (req, res) => {
   try {
@@ -20,58 +21,84 @@ export const createProject = async (req, res) => {
   }
 };
 
-
-export const getAllProjects = async (req, res) => {
-  try {
-    const projects = await ProjectModel.find()
-      .populate("postedBy", "name email picture") // show user details
-      .sort({ createdAt: -1 });
-
-    const likes = await LikeModel.find({ project: { $in: projects.map(p => p._id) } }).populate("user", "name _id");
-
-    projects.forEach(project => {
-      project.likes = likes.filter(like => like.project.toString() === project._id.toString());
-    }
-    );
-    if (projects.length === 0) {
-      return res.status(200).json({ message: "No projects found!" });
-    }
-    console.log("Fetched projects:", projects.length);
-
-    res.json(projects);
-  } catch (err) {
-    console.log("Error fetching projects:", err);
-    res.status(500).json({ error: "Failed to fetch projects" });
-  }
-};
-
 export const getProjectById = async (req, res) => {
   try {
-    const projectDoc = await ProjectModel.findById(req.params.id)
-      .populate("postedBy", "name picture role");
+    const projectId = new mongoose.Types.ObjectId(req.params.id);
 
-    if (!projectDoc) return res.status(404).json({ error: "Project not found" });
+    const projectAggregate = await ProjectModel.aggregate([
+      { $match: { _id: projectId } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "postedBy",
+          foreignField: "_id",
+          as: "postedBy",
+        },
+      },
+      { $unwind: "$postedBy" },
+      {
+        $lookup: {
+          from: "likes",
+          let: { projectId: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$project", "$$projectId"] } } },
+            {
+              $lookup: {
+                from: "users",
+                localField: "likedBy",
+                foreignField: "_id",
+                as: "likedBy",
+              },
+            },
+            { $unwind: "$likedBy" },
+          ],
+          as: "likes",
+        },
+      },
+      {
+        $lookup: {
+          from: "comments",
+          let: { projectId: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$project", "$$projectId"] } } },
+            {
+              $lookup: {
+                from: "users",
+                localField: "commentedBy",
+                foreignField: "_id",
+                as: "commentedBy",
+              },
+            },
+            { $unwind: "$commentedBy" },
+          ],
+          as: "comments",
+        },
+      },
+      {
+        $addFields: {
+          likeCount: { $size: "$likes" },
+          commentCount: { $size: "$comments" },
+        },
+      },
+    ]);
 
-    const project = projectDoc.toObject();
+    const project = projectAggregate[0];
 
-    const likes = await LikeModel.find({ project: project._id }).select("likedBy").populate("likedBy", "name _id picture");
-    const comments = await CommentModel.find({ project: project._id }).select("commentedBy content createdAt").populate("commentedBy", "name _id picture");
+    if (!project) return res.status(404).json({ error: "Project not found" });
 
-    project.likes = likes;
-    project.likeCount = likes.length;
-    project.comments = comments;
-
-    project.hasLiked =
+    // check if user has liked
+    const hasLiked =
       req.user && req.user._id
-        ? likes.some(like => like.likedBy._id.toString() === req.user._id.toString())
+        ? project.likes.some((like) => like.likedBy._id.toString() === req.user._id.toString())
         : false;
 
-    res.json(project);
+    res.json({ ...project, hasLiked });
   } catch (err) {
-    console.log("Error fetching project:", err);
+    console.error("Error fetching project with aggregation:", err);
     res.status(500).json({ error: "Error fetching project" });
   }
 };
+
 
 export const updateProject = async (req, res) => {
   try {
@@ -257,4 +284,54 @@ export const getProjectsByPagination = async (req, res) => {
   }
 };
 
+export const topProjects = async (req, res) => {
+  try {
+    const projects = await ProjectModel.aggregate([
+      {
+        $addFields: {
+          totalLikes: { $ifNull: ["$likeCount", 0] },
+        },
+      },
+      { $sort: { totalLikes: -1, createdAt: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "postedBy",
+          foreignField: "_id",
+          as: "postedBy",
+        },
+      },
+      { $unwind: "$postedBy" },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          domain: 1,
+          tags: 1,
+          githublink: 1,
+          liveLink: 1,
+          image: 1,
+          likeCount: "$totalLikes",
+          commentCount: 1,
+          createdAt: 1,
+          postedBy: {
+            _id: 1,
+            name: 1,
+            role: 1,
+            picture: 1,
+          },
+        },
+      },
+    ]);
 
+    if (projects.length === 0) {
+      return res.status(404).json({ message: "No projects found" });
+    }
+
+    res.json(projects);
+  } catch (err) {
+    console.error("Error fetching top projects:", err);
+    res.status(500).json({ error: "Failed to fetch top projects" });
+  }
+};

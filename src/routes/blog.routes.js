@@ -6,12 +6,14 @@ import {
     updateBlog,
     deleteBlog,
     getBlogsByUser,
+    getBlogsByPagination,
 } from '../controllers/blog.controller.js';
 import { requireRole } from '../middlewares/auth.middleware.js';
 
 export const blogRouter = Router();
 
-blogRouter.get('/by-user', requireRole(['user', 'mentor']), getBlogsByUser); 
+blogRouter.get('/get-blogs-by-pagination',getBlogsByPagination);
+blogRouter.get('/by-user', requireRole(['user', 'mentor']), getBlogsByUser);
 blogRouter.post('/', requireRole(['user', 'mentor']), createBlog);
 blogRouter.get('/:id', requireRole(['user', 'mentor']), getBlogById);
 blogRouter.get('/', requireRole(['user', 'mentor']), getAllBlogs);
