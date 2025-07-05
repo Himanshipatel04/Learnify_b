@@ -151,13 +151,23 @@ export const getBlogsByUser = async (req, res) => {
 
 export const getBlogsByPagination = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, query = "" } = req.query;
     const skip = (page - 1) * limit;
 
-    const blogs = await BlogModel.find()
+    const searchCondition = query.trim()
+      ? {
+          $or: [
+            { title: { $regex: query, $options: "i" } },
+            { tags: { $regex: query, $options: "i" } },
+            { content: { $regex: query, $options: "i" } },
+          ],
+        }
+      : {};
+
+    const blogs = await BlogModel.find(searchCondition)
       .populate("postedBy", "name role picture")
       .sort({ createdAt: -1 })
-      .skip(skip)
+      .skip(Number(skip))
       .limit(Number(limit));
 
     const blogIds = blogs.map((b) => b._id);
@@ -168,7 +178,7 @@ export const getBlogsByPagination = async (req, res) => {
         { $group: { _id: "$blog", count: { $sum: 1 } } },
       ]),
       CommentModel.aggregate([
-        { $match: { blog: { $in: blogIds } } }, // ✅ Corrected field
+        { $match: { blog: { $in: blogIds } } },
         { $group: { _id: "$blog", count: { $sum: 1 } } },
       ]),
     ]);
@@ -185,7 +195,7 @@ export const getBlogsByPagination = async (req, res) => {
       };
     });
 
-    const totalBlogs = await BlogModel.countDocuments();
+    const totalBlogs = await BlogModel.countDocuments(searchCondition);
     const totalPages = Math.ceil(totalBlogs / limit);
 
     res.json({
@@ -199,3 +209,44 @@ export const getBlogsByPagination = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch blogs by pagination" });
   }
 };
+
+
+
+export const getTopBlogs = async (req, res) => {
+  try {
+    const blogs = await BlogModel.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("postedBy", "name role picture");
+
+    const blogIds = blogs.map((b) => b._id);
+
+    const [likeCounts, commentCounts] = await Promise.all([
+      LikeModel.aggregate([
+        { $match: { blog: { $in: blogIds } } },
+        { $group: { _id: "$blog", count: { $sum: 1 } } },
+      ]),
+      CommentModel.aggregate([
+        { $match: { blog: { $in: blogIds } } },
+        { $group: { _id: "$blog", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const likesMap = Object.fromEntries(likeCounts.map((l) => [l._id.toString(), l.count]));
+    const commentsMap = Object.fromEntries(commentCounts.map((c) => [c._id.toString(), c.count]));
+
+    const enrichedBlogs = blogs.map((blog) => {
+      const id = blog._id.toString();
+      return {
+        ...blog.toObject(),
+        likeCount: likesMap[id] || 0,
+        commentCount: commentsMap[id] || 0,
+      };
+    });
+
+    res.json(enrichedBlogs);
+  } catch (error) {
+    console.error("Error fetching top blogs:", error);
+    res.status(500).json({ error: "Failed to fetch top blogs" });
+  }
+}

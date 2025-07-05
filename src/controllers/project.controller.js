@@ -181,13 +181,15 @@ export const searchProjects = async (req, res) => {
           title: 1,
           domain: 1,
           abstract: 1,
+          description: 1,
+          image: 1,
+          createdAt: 1,
           tags: 1,
-          postedBy: { name: 1 }
+          postedBy: { name: 1, picture: 1 }
         }
       }
     ]);
-
-    res.status(200).json(projects);
+    res.status(200).json({ projects: projects });
   } catch (error) {
     console.error("Search error:", error);
     res.status(500).json({ message: 'Search failed', error });
@@ -235,24 +237,86 @@ export const getProjectsByDomain = async (req, res) => {
 
 export const getProjectsByPagination = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, query = "" } = req.query;
     const skip = (page - 1) * limit;
+    const limitNum = Number(limit);
 
-    const projects = await ProjectModel.find()
-      .populate("postedBy", "name role picture")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit));
+    let projects = [];
+    let totalProjects = 0;
+
+    if (query.trim()) {
+      // 🔍 Perform text search using Atlas Search
+      const searchResults = await ProjectModel.aggregate([
+        {
+          $search: {
+            index: "project_index",
+            text: {
+              query,
+              path: { wildcard: "*" },
+            },
+          },
+        },
+        { $skip: skip },
+        { $limit: limitNum },
+        {
+          $lookup: {
+            from: "users",
+            localField: "postedBy",
+            foreignField: "_id",
+            as: "postedBy",
+          },
+        },
+        { $unwind: "$postedBy" },
+        {
+          $project: {
+            title: 1,
+            domain: 1,
+            abstract: 1,
+            description: 1,
+            image: 1,
+            createdAt: 1,
+            tags: 1,
+            postedBy: { name: 1, picture: 1 },
+          },
+        },
+      ]);
+
+      const countResults = await ProjectModel.aggregate([
+        {
+          $search: {
+            index: "project_index",
+            text: {
+              query,
+              path: { wildcard: "*" },
+            },
+          },
+        },
+        { $count: "total" },
+      ]);
+
+      projects = searchResults;
+      totalProjects = countResults[0]?.total || 0;
+    } else {
+      // 🗂️ Normal pagination without search
+      projects = await ProjectModel.find()
+        .populate("postedBy", "name role picture")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum).lean()
+
+      totalProjects = await ProjectModel.countDocuments();
+    }
 
     const projectIds = projects.map((p) => p._id);
 
+    // 🧮 Aggregate like & comment counts
     const [likeCounts, commentCounts] = await Promise.all([
       LikeModel.aggregate([
-        { $match: { project: { $in: projectIds } } }, // ✅ Fix here
+        { $match: { project: { $in: projectIds } } },
         { $group: { _id: "$project", count: { $sum: 1 } } },
       ]),
       CommentModel.aggregate([
-        { $match: { project: { $in: projectIds } } }, // ✅ Fix here
+        { $match: { project: { $in: projectIds } } },
         { $group: { _id: "$project", count: { $sum: 1 } } },
       ]),
     ]);
@@ -261,48 +325,75 @@ export const getProjectsByPagination = async (req, res) => {
     const commentsMap = Object.fromEntries(commentCounts.map((c) => [c._id.toString(), c.count]));
 
     const enrichedProjects = projects.map((project) => {
-      const id = project._id.toString();
+      const id = project._id?.toString();
       return {
-        ...project.toObject(),
+        ...project,
         likeCount: likesMap[id] || 0,
         commentCount: commentsMap[id] || 0,
       };
     });
 
-    const totalProjects = await ProjectModel.countDocuments();
     const totalPages = Math.ceil(totalProjects / limit);
 
-    res.json({
+    res.status(200).json({
       projects: enrichedProjects,
       totalProjects,
       totalPages,
       currentPage: Number(page),
     });
   } catch (error) {
-    console.error("Error fetching projects by pagination:", error);
-    res.status(500).json({ error: "Failed to fetch projects by pagination" });
+    console.error("Error in getProjects:", error);
+    res.status(500).json({ message: "Failed to fetch projects", error });
   }
 };
+
 
 export const topProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.aggregate([
+      // Join with Likes
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "project",
+          as: "likes"
+        }
+      },
       {
         $addFields: {
-          totalLikes: { $ifNull: ["$likeCount", 0] },
-        },
+          likeCount: { $size: "$likes" }
+        }
       },
-      { $sort: { totalLikes: -1, createdAt: -1 } },
-      { $limit: 5 },
+
+      // Optional: Join with Comments if you also want commentCount
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "project",
+          as: "comments"
+        }
+      },
+      {
+        $addFields: {
+          commentCount: { $size: "$comments" }
+        }
+      },
+
+      { $sort: { likeCount: -1, createdAt: -1 } },
+      { $limit: 3 },
+
       {
         $lookup: {
           from: "users",
           localField: "postedBy",
           foreignField: "_id",
-          as: "postedBy",
-        },
+          as: "postedBy"
+        }
       },
       { $unwind: "$postedBy" },
+
       {
         $project: {
           title: 1,
@@ -312,17 +403,17 @@ export const topProjects = async (req, res) => {
           githublink: 1,
           liveLink: 1,
           image: 1,
-          likeCount: "$totalLikes",
+          likeCount: 1,
           commentCount: 1,
           createdAt: 1,
           postedBy: {
             _id: 1,
             name: 1,
             role: 1,
-            picture: 1,
-          },
-        },
-      },
+            picture: 1
+          }
+        }
+      }
     ]);
 
     if (projects.length === 0) {
@@ -335,3 +426,4 @@ export const topProjects = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch top projects" });
   }
 };
+
