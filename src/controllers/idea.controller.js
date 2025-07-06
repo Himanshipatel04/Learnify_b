@@ -120,3 +120,54 @@ export const searchIdeas = async (req, res) => {
     res.status(500).json({ message: 'Search failed', error });
   }
 };
+
+export const getIdeasByPagination = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, query = "" } = req.query;
+    const skip = (page - 1) * limit;
+
+    const searchCondition = query.trim()
+      ? {
+        $or: [
+          { title: { $regex: query, $options: "i" } },
+          { tags: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+        ],
+      }
+      : {};
+
+    const ideas = await IdeaModel.find(searchCondition)
+      .populate("postedBy", "name picture role")
+      .sort({ createdAt: -1 })
+      .skip(Number(skip))
+      .limit(Number(limit));
+
+    const totalIdeas = await IdeaModel.countDocuments(searchCondition);
+    const totalPages = Math.ceil(totalIdeas / limit);
+
+    res.json({
+      ideas,
+      totalIdeas,
+      totalPages,
+      currentPage: Number(page),
+    });
+  } catch (error) {
+    console.error("Error fetching ideas:", error);
+    res.status(500).json({ error: "Failed to fetch ideas" });
+  }
+};
+
+export const getTopIdeas = async (req, res) => {
+  try {
+    const topIdeas = await IdeaModel.find()
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .populate("postedBy", "name picture role");
+
+    res.json(topIdeas);
+  } catch (error) {
+    console.error("Error fetching top ideas:", error);
+    res.status(500).json({ error: "Failed to fetch top ideas" });
+  }
+};
+
