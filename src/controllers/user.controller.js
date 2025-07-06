@@ -42,8 +42,8 @@ export const applyForMentorship = async (req, res) => {
             message: `You have applied for mentorship. Please wait for approval.`,
             read: false,
         });
-        await notification.save();          
-        
+        await notification.save();
+
         return res.status(200).json({
             message:
                 "Mentorship request applied successfully! You will be notified via email.",
@@ -90,7 +90,7 @@ export const updateProfile = async (req, res) => {
 
 export const getUserProfile = async (req, res) => {
     try {
-        // console.log("hello")
+        console.log("hello")
         const userId = req.params.userId;
         if (!userId) {
             return res.status(400).json({ error: "User ID is required" });
@@ -100,6 +100,7 @@ export const getUserProfile = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
+        
         return res.status(200).json(user);
     }
     catch (error) {
@@ -155,4 +156,66 @@ export const togglePrivacy = async (req, res) => {
         console.error("Error toggling privacy:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
-}                                           
+}
+export const getMentorsByPagination = async (req, res) => {
+    try {
+        const { page = 1, limit = 10, query = "" } = req.query;
+        const skip = (page - 1) * limit;
+
+        // Searching on name, company, skills (inside mentorDetails)
+        const searchCondition = query.trim()
+            ? {
+                role: "mentor",
+                "mentorDetails.mentorRequestStatus": "approved",
+                $or: [
+                    { name: { $regex: query, $options: "i" } },
+                    { "mentorDetails.skills": { $regex: query, $options: "i" } },
+                    { "mentorDetails.company": { $regex: query, $options: "i" } },
+                ],
+            }
+            : {
+                role: "mentor",
+                "mentorDetails.mentorRequestStatus": "approved",
+            };
+
+        console.log(searchCondition)
+
+        const mentors = await UserModel.find(searchCondition)
+            .skip(Number(skip))
+            .limit(Number(limit))
+            .select("-password")
+            .sort({ createdAt: -1 });
+
+        console.log(mentors)
+
+        const totalMentors = await UserModel.countDocuments(searchCondition);
+        const totalPages = Math.ceil(totalMentors / limit);
+
+        res.json({
+            mentors,
+            totalMentors,
+            totalPages,
+            currentPage: Number(page),
+        });
+    } catch (error) {
+        console.error("Error fetching mentors by pagination:", error);
+        res.status(500).json({ error: "Failed to fetch mentors by pagination" });
+    }
+};
+
+export const getTopMentors = async (req, res) => {
+    try {
+        const mentors = await UserModel.find({
+            role: "mentor",
+            "mentorDetails.mentorRequestStatus": "approved",
+        })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .select("name picture mentorDetails.skills mentorDetails.company");
+
+        res.json(mentors);
+    } catch (error) {
+        console.error("Error fetching top mentors:", error);
+        res.status(500).json({ error: "Failed to fetch top mentors" });
+    }
+};
