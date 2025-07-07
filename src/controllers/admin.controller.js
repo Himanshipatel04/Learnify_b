@@ -48,22 +48,40 @@ export const rejectMentor = async (req, res) => {
     }
 };
 
-// Pagination Utility
 const paginate = async (model, req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    try {
-        const total = await model.countDocuments();
-        const data = await model.find()
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .sort({ createdAt: -1 });
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
 
-        res.json({ total, page, totalPages: Math.ceil(total / limit), data });
-    } catch (err) {
-        res.status(500).json({ message: "Error fetching data", error: err.message });
+  try {
+    const total = await model.countDocuments();
+
+    let dataQuery = model.find();
+
+    if (model.modelName === "User") {
+      dataQuery = dataQuery.select("-password -__v");
+    } else {
+      dataQuery = dataQuery.populate("postedBy", "name email");
     }
+
+    const data = await dataQuery
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    res.json({
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      data,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Error fetching data",
+      error: err.message,
+    });
+  }
 };
+
 
 // Dashboard figures
 export const getFigures = async (req, res) => {
@@ -89,6 +107,8 @@ export const getProjects = (req, res) => paginate(ProjectModel, req, res);
 export const getIdeas = (req, res) => paginate(IdeaModel, req, res);
 export const getBlogs = (req, res) => paginate(BlogModel, req, res);
 // Assuming mentor = UserModel with role='mentor', you can filter below
+
+
 export const getMentors = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;

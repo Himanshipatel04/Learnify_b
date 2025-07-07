@@ -6,11 +6,18 @@ import {
   deleteIdea,
   getIdeaById,
   searchIdeas,
-  getIdeasByUser
+  getIdeasByUser,
+  getIdeasByPagination,
+  getTopIdeas
 } from '../controllers/idea.controller.js';
 import { requireRole } from '../middlewares/auth.middleware.js';
 
 export const ideaRouter = Router();
+
+
+ideaRouter.get("/get-ideas-by-pagination", getIdeasByPagination);
+
+ideaRouter.get("/top-ideas", getTopIdeas);
 
 ideaRouter.get('/by-user', requireRole(["user", "mentor", "admin"]), getIdeasByUser)
 // Create a new idea
