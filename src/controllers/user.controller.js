@@ -163,6 +163,7 @@ export const togglePrivacy = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 export const getMentorsByPagination = async (req, res) => {
   try {
     const { page = 1, limit = 10, query = "" } = req.query;
@@ -282,34 +283,48 @@ export const getSuggestedUsers = async (req, res) => {
 
 export const getSimilarPosts = async (req, res) => {
   try {
-    let { tags } = req.query; // changed from req.params to req.query
+    let { tags, domain, id } = req.query;
 
-    console.log(tags);
-
-    if (!tags) {
-      return res.status(200);
+    if (!tags || !domain || !id) {
+      return res.status(400).json({ error: "tags, domain, and id are required" });
     }
 
-    const tagArray = tags.split(",").map((tag) => tag.trim());
+    const tagArray = tags.split(",").map((tag) => tag.trim().toLowerCase());
 
-    console.log(tagArray)
-
-    if (tagArray.length === 0) {
-      return res.status(400).json({ error: "At least one tag is required" });
-    }
-
-    const similarPosts = await ProjectModel.find({
-      
+    // Step 1: Fetch posts with same domain & at least one common tag
+    const domainTagPosts = await ProjectModel.find({
+      _id: { $ne: id },
+      domain: domain,
       tags: { $in: tagArray },
     })
       .select("title image postedBy domain")
+      .populate("postedBy", "name picture")
       .sort({ createdAt: -1 })
-      .limit(5)
-      .populate("postedBy", "name picture");
-    console.log("Similar posts found:", similarPosts);
+      .limit(5);
+
+    let similarPosts = [...domainTagPosts];
+
+    // Step 2: If less than 5, fetch additional recent posts (not current one & not already included)
+    if (similarPosts.length < 5) {
+      const existingIds = similarPosts.map((post) => post._id.toString());
+
+      const fillerPosts = await ProjectModel.find({
+        _id: { $ne: id, $nin: existingIds },
+      })
+        .select("title image postedBy domain")
+        .populate("postedBy", "name picture")
+        .sort({ createdAt: -1 })
+        .limit(5 - similarPosts.length);
+
+      similarPosts = [...similarPosts, ...fillerPosts];
+    }
+
     return res.status(200).json(similarPosts);
   } catch (error) {
     console.error("Error fetching similar posts:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
+

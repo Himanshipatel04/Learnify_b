@@ -82,7 +82,6 @@ const paginate = async (model, req, res) => {
   }
 };
 
-
 // Dashboard figures
 export const getFigures = async (req, res) => {
     try {
@@ -124,6 +123,7 @@ export const getMentors = async (req, res) => {
         res.status(500).json({ message: "Error fetching mentors", error: err.message });
     }
 };
+
 export const getHackathons = (req, res) => paginate(HackathonModel, req, res);
 
 // Delete Handlers
@@ -210,4 +210,16 @@ export const sendMailByAdmin = async (req, res) => {
     } catch (err) {
         res.status(500).json({ message: "Mail failed", error: err.message });
     }
+};
+
+// /controllers/admin.js
+export const getMentorshipRequests = async (req, res) => {
+  try {
+    const requests = await UserModel.find({ "mentorDetails.mentorRequestStatus": "pending" })
+      .select("name email picture college mentorDetails");
+
+    return res.status(200).json(requests);
+  } catch (err) {
+   return res.status(500).json({ error: "Failed to fetch mentorship requests" });
+  }
 };
