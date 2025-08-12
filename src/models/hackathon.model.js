@@ -25,7 +25,7 @@ const hackathonSchema = new mongoose.Schema(
     },
     mode: {
       type: String,
-      enum: ["online", "offline", "hybrid"],
+      enum: ["Online", "Offline", "Hybrid"],
       required: true,
     },
     location: {

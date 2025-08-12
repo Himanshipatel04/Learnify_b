@@ -5,13 +5,15 @@ import "./src/auth/passport.js"
 import dotenv from 'dotenv';
 import { connectDB } from './src/config/db.config.js';
 import cors from 'cors';
+import { generalLimiter } from './src/middlewares/ratelimiter.middleware.js'; // import BEFORE use
 
 dotenv.config();
 const app = express();
 
-app.use(generalLimiter);
+// Rate limiter
+// app.use(generalLimiter);
 
-//Request Logger
+// Request Logger
 app.use((req, _, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
@@ -21,15 +23,18 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(passport.initialize());
 
-
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: process.env.FRONTEND_URL || "http://localhost:5173", // fallback for dev
   credentials: true,
 }));
 
-
 // Connect to MongoDB   
 connectDB();
+
+// Test root route
+app.get("/", (req, res) => {
+  res.send("API is running 🚀");
+});
 
 // Import routes    
 import { authRouter } from './src/routes/auth.routes.js';
@@ -39,25 +44,23 @@ import { projectRouter } from './src/routes/project.routes.js';
 import { geminiRouter } from './src/routes/gemini.routes.js';
 import { ideaRouter } from './src/routes/idea.routes.js';
 import { userRouter } from './src/routes/user.routes.js';
-import { generalLimiter } from './src/middlewares/ratelimiter.middleware.js';
-import { blogRouter } from './src/routes/blog.routes.js'
+import { blogRouter } from './src/routes/blog.routes.js';
 import { notificationRouter } from './src/routes/notification.routes.js';
-import { adminRouter } from './src/routes/admin.routes.js'; 
+import { adminRouter } from './src/routes/admin.routes.js';
+import {hackathonRouter} from './src/routes/hackathon.routes.js'
+
 app.use('/admin', adminRouter); 
 app.use('/auth', authRouter);
 app.use('/likes', likeRouter);
 app.use('/comments', commentRouter);
 app.use('/projects', projectRouter);
-app.use('/ideas', ideaRouter)
+app.use('/ideas', ideaRouter);
 app.use('/gemini', geminiRouter);
 app.use('/users', userRouter);
-app.use('/blogs', blogRouter)
-app.use('/notifications', notificationRouter)
+app.use('/blogs', blogRouter);
+app.use('/notifications', notificationRouter);
+app.use('/hackathons',hackathonRouter)
 
-//Start the server  
+// Start the server  
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
-
-
